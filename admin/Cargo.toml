@@ -6,4 +6,12 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-nix = { version = "0.25.0", features = ["sched", "fs"] }
+nix = { version = "0.25.0", features = [
+  "sched",
+  "fs",
+  "mount",
+  "process",
+  "signal",
+] }
+io-uring = "0.5"
+libc = "0.2.131"
