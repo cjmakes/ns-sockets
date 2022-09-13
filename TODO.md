@@ -1,0 +1,4 @@
+- [ ] unit tests
+- [ ] better error handling with anyhow and thiserror
+- [ ] io_uring use
+- [ ] tracing with spans

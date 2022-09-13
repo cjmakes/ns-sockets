@@ -1,12 +1,16 @@
 use crate::{Error, Result};
 
+use std::net::Ipv4Addr;
 use std::os::unix::io::RawFd;
 use std::path::Path;
 
+use futures::stream::TryStreamExt;
 use nix::fcntl::OFlag;
 use nix::sys::stat::Mode;
 use nix::sys::wait::WaitStatus;
 use nix::{mount, sched};
+use rtnetlink::new_connection;
+use smol::prelude::*;
 
 use tracing::{error, instrument, span, Level};
 
@@ -54,8 +58,34 @@ fn setup_ns(name: &str) -> isize {
         error!("failed to pin: {}", error);
         return -1;
     }
+    smol::block_on(set_loopback_up()).expect("failed to setup");
 
     0
+}
+
+async fn set_loopback_up() -> Result<()> {
+    let link_name = "lo";
+    let ip = std::net::IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
+    let (connection, handle, _) = new_connection().unwrap();
+
+    smol::spawn(connection).detach();
+
+    let mut links = handle
+        .link()
+        .get()
+        .match_name(link_name.to_string())
+        .execute();
+
+    if let Some(link) = TryStreamExt::try_next(&mut links).await.unwrap() {
+        handle
+            .address()
+            .add(link.header.index, ip, 8)
+            .execute()
+            .await
+            .unwrap();
+    }
+
+    Ok(())
 }
 
 #[instrument]
